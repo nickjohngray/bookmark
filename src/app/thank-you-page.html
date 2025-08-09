@@ -1,10 +1,13 @@
 <!-- THANK YOU PAGE TEMPLATE -->
-<main class="thank-you">
-  <section class="thank-you__card">
-    <h1>Thank You!</h1>
-    <p>Your bookmark was submitted.</p>
-    <p>
-      <span class="url-label">Submitted URL:</span>
+<main class="container thank-you">
+  <section class="section thank-you__card">
+    <header class="page-header">
+      <h1 class="page-title">Thank You!</h1>
+      <p class="page-subtitle">Your bookmark was submitted.</p>
+    </header>
+
+    <div class="submission stack-sm">
+      <span class="label">Submitted URL:</span>
       <a
         class="submitted-url"
         [href]="submittedUrl"
@@ -13,9 +16,12 @@
       >
         {{ submittedUrl }}
       </a>
-    </p>
-    <button type="button" class="back-button" (click)="goBack()">
-      Back to bookmarks
-    </button>
+    </div>
+
+    <div class="actions">
+      <button type="button" class="btn btn-primary" (click)="goBack()">
+        Back to bookmarks
+      </button>
+    </div>
   </section>
 </main>

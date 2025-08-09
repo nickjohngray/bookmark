@@ -1,61 +1,9 @@
-/* =========================
-   PHQ Bookmark Manager CSS
-   ========================= */
+/* ==========================================================================
+   OVERVIEW PAGE — page-specific styles only
+   Uses global tokens from styles.css; provides fallbacks for any missing ones.
+   ========================================================================== */
 
-/* --- Base / Reset-ish --- */
-*,
-*::before,
-*::after { box-sizing: border-box; }
-
-:root {
-  --bg: #f7f7f8;
-  --card: #ffffff;
-  --text: #111;
-  --muted: #666;
-  --border: #ddd;
-  --border-strong: #cfcfcf;
-  --brand: #0b5cff;
-  --brand-ink: #063aa3;
-  --focus: #eef5ff;
-  --danger: #b00020;
-  --radius: 10px;
-  --shadow: 0 1px 3px rgba(0,0,0,.08), 0 6px 24px rgba(0,0,0,.06);
-}
-
-html, body {
-  height: 100%;
-}
-
-body {
-  margin: 0;
-  font: 16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
-  color: var(--text);
-  background: var(--bg);
-}
-
-/* --- Layout --- */
-.container {
-  max-width: 760px;
-  margin: 24px auto;
-  padding: 16px;
-}
-
-.card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 16px;
-}
-
-/* --- Header --- */
-h1 {
-  margin: 0 0 12px;
-  font-size: 28px;
-  line-height: 1.2;
-}
-
-/* --- Dev tools (seed/clear buttons etc) --- */
+/* --- Dev tools bar ------------------------------------------------------- */
 .dev-tools {
   display: flex;
   flex-wrap: wrap;
@@ -65,177 +13,131 @@ h1 {
 .dev-tools button {
   padding: .55rem .9rem;
   border-radius: 8px;
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--border-strong, #cbd5e1);
   background: #f3f4f6;
   cursor: pointer;
   font-weight: 600;
 }
-.dev-tools button:hover { background: #eceef2; }
 .dev-tools button:active { transform: translateY(1px); }
 
-/* --- Add form --- */
-.add-form {
-  display: flex;
-  gap: .6rem;
-  align-items: center;
-  margin: 8px 0 16px;
-}
-
-.add-form input[type="text"] {
-  flex: 1 1 auto;
-  min-width: 160px;
-  padding: .6rem .7rem;
-  border: 1px solid var(--border-strong);
-  border-radius: 8px;
-  outline: none;
-}
-.add-form input[type="text"]:focus {
-  background: var(--focus);
-  border-color: var(--brand);
-}
-
-.add-form button {
-  padding: .6rem .9rem;
-  border: 1px solid var(--brand);
-  background: var(--brand);
-  color: #fff;
-  border-radius: 8px;
-  font-weight: 700;
-  cursor: pointer;
-}
-.add-form button:disabled {
-  opacity: .6;
-  cursor: not-allowed;
-}
-.add-form button:not(:disabled):hover { background: var(--brand-ink); }
-
-/* --- List --- */
+/* --- Bookmark list shell ------------------------------------------------- */
 ul.bookmark-list {
   list-style: none;
   padding: 0;
   margin: 0;
 }
 
+/* Each bookmark row */
 li.bookmark-item {
-  list-style: none;
-  display: block;
-  background: var(--card);
-  border: 1px solid var(--border);
+  background: var(--card, #fff);
+  border: 1px solid var(--border, #e5e7eb);
   border-radius: 8px;
   margin: 0 0 .55rem;
   padding: 8px 10px;
-  transition: background .25s ease, border-color .25s ease;
+  transition: background .25s ease, border-color .25s ease, box-shadow .2s ease;
+}
+li.bookmark-item:hover,
+li.bookmark-item:focus-within {
+  background: #eef4ff;
+  box-shadow: 0 1px 3px rgba(0,0,0,.12), 0 2px 6px rgba(0,0,0,.08);
 }
 
-li.bookmark-item:hover {
-  background: #fafafa;
-  border-color: var(--border-strong);
-}
-
-.bookmark-link {
-  cursor: pointer;
-}
-
-/* row layout: link + buttons (or edit mode) */
+/* Row layout */
 .bookmark-content {
   display: flex;
   align-items: center;
   gap: .75rem;
-  width: 100%; /* important for mobile flex math */
+  width: 100%;
 }
 
-/* link itself */
+/* Clickable link (left) */
 .bookmark-content > a {
-  flex: 1 1 auto;      /* take all free space */
-  min-width: 0;        /* allow text to shrink inside flex */
-  color: var(--brand-ink);
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--brand-ink, #0a4fde);
   text-decoration: none;
-  word-break: break-word;
   overflow-wrap: anywhere;
 }
-.bookmark-content > a:hover { text-decoration: underline; }
+.bookmark-content > a:hover,
 .bookmark-content > a:focus {
-  outline: none;
-  background: var(--focus);
+  text-decoration: underline;
+  background: var(--focus, rgba(11,92,255,.12));
   border-radius: 4px;
+  /* keep the browser outline for accessibility */
 }
 
-/* buttons on the right */
+/* Actions on the right */
 .bookmark-buttons {
-  margin-left: auto;    /* <-- pushes buttons to the FAR RIGHT */
   flex: 0 0 auto;
   display: flex;
   gap: .5rem;
-  visibility: hidden;   /* desktop: show on hover/focus for a clean look */
+  visibility: hidden;
   opacity: 0;
   transition: opacity .18s ease-in-out, visibility .18s ease-in-out;
 }
-
 li.bookmark-item:hover .bookmark-buttons,
 li.bookmark-item:focus-within .bookmark-buttons {
   visibility: visible;
   opacity: 1;
 }
-
-/* individual button styles */
 .bookmark-buttons button {
   padding: .45rem .7rem;
   border-radius: 7px;
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--border-strong, #cbd5e1);
   background: #f5f6f8;
   font-weight: 600;
   cursor: pointer;
 }
-.bookmark-buttons button:hover { background: #eceef2; }
 .bookmark-buttons .delete {
   border-color: #e2b7bd;
   background: #fdebed;
   color: #6a0010;
 }
-.bookmark-buttons .delete:hover { background: #f9dbe0; }
+.bookmark-buttons .delete:hover,
+.bookmark-buttons .delete:focus { background: #f9dbe0; }
 
-/* --- Edit mode row --- */
+/* --- Edit mode ----------------------------------------------------------- */
 .edit-mode {
   display: flex;
   align-items: center;
   gap: .6rem;
   width: 100%;
 }
-
 .edit-mode input[type="text"] {
   flex: 1 1 auto;
   min-width: 100px;
   padding: .55rem .7rem;
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--border-strong, #cbd5e1);
   border-radius: 8px;
-  outline: none;
 }
 .edit-mode input[type="text"]:focus {
-  background: var(--focus);
-  border-color: var(--brand);
+  background: var(--focus, rgba(11,92,255,.12));
+  border-color: var(--brand, #0b5cff);
 }
-
 .edit-mode .actions {
   display: flex;
   gap: .5rem;
-  margin-left: auto; /* keep actions at right even in edit mode */
+  margin-left: auto;
 }
 .edit-mode .actions button {
   padding: .5rem .8rem;
   border-radius: 8px;
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--border-strong, #cbd5e1);
   background: #f3f4f6;
   font-weight: 700;
   cursor: pointer;
 }
 .edit-mode .actions .save {
-  border-color: var(--brand);
-  background: var(--brand);
+  border-color: var(--brand, #0b5cff);
+  background: var(--brand, #0b5cff);
   color: #fff;
 }
-.edit-mode .actions .save:hover { background: var(--brand-ink); }
+.edit-mode .actions .save:hover,
+.edit-mode .actions .save:focus {
+  background: var(--brand-ink, #0a4fde);
+}
 
-/* --- Link preview (floating) --- */
+/* --- Link preview (fixed to the right) ---------------------------------- */
 .link-preview-global {
   position: fixed;
   top: 12px;
@@ -243,13 +145,12 @@ li.bookmark-item:focus-within .bookmark-buttons {
   width: 300px;
   height: 300px;
   background: #fff;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border, #e5e7eb);
   border-radius: 8px;
   padding: 6px;
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow, 0 8px 24px rgba(0,0,0,.08));
   z-index: 2147483647;
 }
-
 .link-preview-global img {
   width: 100%;
   height: 100%;
@@ -258,7 +159,7 @@ li.bookmark-item:focus-within .bookmark-buttons {
   border-radius: 6px;
 }
 
-/* --- Pagination --- */
+/* --- Pagination ---------------------------------------------------------- */
 .pagination {
   display: flex;
   justify-content: center;
@@ -267,59 +168,56 @@ li.bookmark-item:focus-within .bookmark-buttons {
   margin: 14px 0 4px;
   flex-wrap: wrap;
 }
-
 .pagination button,
 .pagination a {
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--border-strong, #cbd5e1);
   background: #fff;
   padding: .45rem .7rem;
   border-radius: 8px;
   text-decoration: none;
-  color: var(--text);
+  color: var(--text, #111827);
   cursor: pointer;
   min-width: 40px;
   text-align: center;
 }
-.pagination .active {
-  background: var(--brand);
-  border-color: var(--brand);
-  color: #fff;
-  font-weight: 700;
-}
 
-/* --- Results (Thank You) page bits --- */
-.thankyou {
-  text-align: center;
-  padding: 32px 16px;
+/* --- Add form ------------------------------------------------------------ */
+.add-form {
+  display: flex;
+  gap: .6rem;
+  align-items: center;
+  margin: 8px 0 16px;
 }
-.thankyou .submitted-url {
-  display: inline-block;
-  margin-top: 10px;
-  padding: 8px 12px;
-  border: 1px dashed var(--border-strong);
+.add-form input[type="text"] {
+  flex: 1 1 auto;
+  min-width: 160px;
+  padding: .6rem .7rem;
+  border: 1px solid var(--border-strong, #cbd5e1);
   border-radius: 8px;
-  color: var(--brand-ink);
-  background: #f8fbff;
+}
+.add-form input[type="text"]:focus {
+  background: var(--focus, rgba(11,92,255,.12));
+  border-color: var(--brand, #0b5cff);
+}
+.add-form button {
+  padding: .6rem .9rem;
+  border: 1px solid var(--brand, #0b5cff);
+  background: var(--brand, #0b5cff); /* fallback ensures color even if var missing */
+  color: #fff;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
 }
 
-/* =========================
-   Responsive: Mobile first
-   ========================= */
+/* --- Responsive ---------------------------------------------------------- */
 @media (max-width: 768px) {
-  .container { padding: 8px; }
-  h1 { font-size: 24px; }
-
-  /* Always show the buttons on mobile and keep them right-aligned */
   .bookmark-buttons {
+    margin-left: auto;
     visibility: visible !important;
     opacity: 1 !important;
   }
-
-  /* Tighten row spacing and ensure link wraps nicely */
   li.bookmark-item { padding: 8px 10px; }
   .bookmark-content { gap: .5rem; }
-
-  /* Keep preview small and docked bottom-right */
   .link-preview-global {
     width: 110px;
     height: 110px;
@@ -329,8 +227,6 @@ li.bookmark-item:focus-within .bookmark-buttons {
     left: auto;
   }
 }
-
-/* Even narrower */
 @media (max-width: 420px) {
   .add-form { flex-direction: column; align-items: stretch; }
   .add-form button { width: 100%; }
