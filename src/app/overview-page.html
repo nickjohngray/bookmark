@@ -18,7 +18,7 @@
       class="url-input"
       type="text"
       name="url"
-      placeholder="Add a URL (http/https optional)"
+      placeholder="Add a URL"
       autocomplete="off"
       aria-label="Add a URL"
     />
@@ -30,10 +30,9 @@
   <!-- Preview block (null-safe) -->
   <div *ngIf="hoveredBookmark as hb" class="link-preview-global" aria-live="polite">
     <h2 class="sr-only">Preview</h2>
-    <img
-      [src]="'https://image.thum.io/get/width/300/crop/768/' + hb.url"
-      [alt]="'Preview of ' + hb.url"
-    />
+
+    <img [src]="previewUrl(hb.url)" alt="Preview">
+
   </div>
 
   <!-- Bookmarks list -->
@@ -52,6 +51,7 @@
         [attr.id]="'bookmark-item-' + i"
         (focus)="handleItemFocus(i)"
         (blur)="focusedId = null"
+        (click)="startEditingAndFocusToInput(bookmark)"
         (mouseenter)="hoveredId = bookmark.id; hoveredBookmark = { id: bookmark.id, url: bookmark.url }"
         (mouseleave)="hoveredId = null; hoveredBookmark = null"
         (keydown.ArrowDown)="editNextItem(i)"
@@ -59,19 +59,49 @@
         (keydown.enter)="startEditing(bookmark)"
       >
         <div class="bookmark-content">
-          <!-- Normal row -->
           <ng-container *ngIf="editingId !== bookmark.id; else editTpl">
-           <span  (click)="startEditingAndFocusToInput(bookmark)" class="bookmark-link" tabindex="-1">
+           <span  class="bookmark-text">
               {{ bookmark.url }}
             </span>
 
-            <!-- Action buttons (desktop shows on hover/focus; mobile always visible via CSS) -->
-            <span
+             <span
               class="bookmark-buttons"
-              [class.visible]="editingId === null && hoveredId === bookmark.id && (!focusedId || focusedId === bookmark.id)"
+              [class.visible]="editingId === null"
             >
-              <button type="button" class="btn" (click)="startEditing(bookmark)">Edit</button>
-              <button type="button" class="btn delete" (click)="delete(bookmark.id)">Delete</button>
+
+              <!-- Open Button -->
+             <button
+               class="edit-btn"
+               title="Open"
+               (click)="openWindow(bookmark)"
+             >
+              <svg xmlns="http://www.w3.org/2000/svg"
+                   width="20" height="20"
+                   viewBox="0 0 24 24"
+                   fill="none"
+                   stroke="currentColor"
+                   stroke-width="2"
+                   stroke-linecap="round"
+                   stroke-linejoin="round"
+                   aria-hidden="true">
+                <path d="M18 13v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                <polyline points="15 3 21 3 21 9" />
+                <line x1="10" y1="14" x2="21" y2="3" />
+              </svg>
+            </button>
+               <!-- Delete Button -->
+              <button class="delete-btn" title="Delete" (click)="delete(bookmark.id)">
+                <svg xmlns="http://www.w3.org/2000/svg"
+                     viewBox="0 0 24 24"
+                     width="16"
+                     height="16"
+                     fill="#ff4d4d">
+                  <path d="M3 6h18v2H3V6zm2 3h14v12a2 2 0 0 1-2
+                           2H7a2 2 0 0 1-2-2V9zm5 3v8h2v-8H10zm4
+                           0v8h2v-8h-2zM9 4V2h6v2h5v2H4V4h5z"/>
+                </svg>
+              </button>
+
             </span>
           </ng-container>
 
@@ -83,14 +113,38 @@
                 [(ngModel)]="editingValue"
                 name="editUrl-{{ bookmark.id }}"
                 placeholder="Enter new URL"
-                (keyup.enter)="saveEdit()"
+                (keydown.enter)="save($event)"
                 (keyup.escape)="cancelEdit()"
                 autofocus
                 aria-label="Edit URL"
               />
               <div class="actions">
-                <button type="button" class="btn btn--primary" (click)="saveEdit()">Save</button>
-                <button type="button" class="btn" (click)="cancelEdit()">Cancel</button>
+                <button type="button" class="btn btn--primary" (click)="save($event)" title="Save">
+                  <svg xmlns="http://www.w3.org/2000/svg"
+                       width="20" height="20"
+                       viewBox="0 0 24 24"
+                       fill="none"
+                       stroke="currentColor"
+                       stroke-width="2"
+                       stroke-linecap="round"
+                       stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </button>
+
+                <button type="button" class="btn" (click)="cancelEdit()" title="Cancel">
+                  <svg xmlns="http://www.w3.org/2000/svg"
+                       width="20" height="20"
+                       viewBox="0 0 24 24"
+                       fill="none"
+                       stroke="currentColor"
+                       stroke-width="2"
+                       stroke-linecap="round"
+                       stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
               </div>
             </div>
           </ng-template>

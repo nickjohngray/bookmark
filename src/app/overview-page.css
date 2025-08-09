@@ -3,6 +3,15 @@
    Uses global tokens from styles.css; provides fallbacks for any missing ones.
    ========================================================================== */
 
+/* ===========================================================
+   Save button — green check icon
+   - Button text/icon color drives SVG stroke (currentColor)
+   - Works across desktop & mobile
+   =========================================================== */
+.btn.btn--primary[title="Save"] {
+  color: #16a34a; /* Success green, matches app's tone */
+}
+
 /* --- Dev tools bar ------------------------------------------------------- */
 .dev-tools {
   display: flex;
@@ -40,6 +49,14 @@ li.bookmark-item:hover,
 li.bookmark-item:focus-within {
   background: #eef4ff;
   box-shadow: 0 1px 3px rgba(0,0,0,.12), 0 2px 6px rgba(0,0,0,.08);
+}
+
+.bookmark-text{
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Row layout */
@@ -209,15 +226,71 @@ li.bookmark-item:focus-within .bookmark-buttons {
   cursor: pointer;
 }
 
-/* --- Responsive ---------------------------------------------------------- */
+/* ===========================================================
+   OVERVIEW — MOBILE STYLES
+   Paste this at the end of overview-page.css
+   =========================================================== */
+
+/* -------------------------
+   Tablet & small laptops (≤768)
+   ------------------------- */
 @media (max-width: 768px) {
-  .bookmark-buttons {
-    margin-left: auto;
-    visibility: visible !important;
-    opacity: 1 !important;
+  /* Page wrapper: small side padding to breathe */
+  .container {
+    padding-left: 12px;
+    padding-right: 12px;
   }
-  li.bookmark-item { padding: 8px 10px; }
-  .bookmark-content { gap: .5rem; }
+
+  /* Dev tools row: wrap + compact buttons */
+  .dev-tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .dev-tools button {
+    padding: 8px 10px;
+    border-radius: 8px;
+  }
+
+  /* Add form: stacked and STICKY to the top */
+  .add-form {
+    display: flex;
+    flex-direction: column;   /* input above button */
+    gap: 8px;
+    position: sticky;         /* sticks at top while scrolling */
+    top: 0;
+    z-index: 1000;
+    background: #f6f7fb;      /* cover content beneath while sticking */
+    padding: 10px 0 12px;
+    /* subtle separation from list when stuck */
+    box-shadow: 0 1px 0 rgba(0,0,0,0.05);
+  }
+
+  /* Input: full-width, finger-friendly, prevent iOS zoom */
+  .url-input {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 8px;
+    font-size: 16px;          /* 16px avoids iOS zoom */
+  }
+
+  /* Submit button: full-width under input */
+  .add-form button[type="submit"] {
+    width: 100%;
+    padding: 12px 14px;
+    background: #0b5cff;
+    color: #fff;
+    font-weight: 700;
+    border: 0;
+    border-radius: 8px;
+    font-size: 16px;
+  }
+
+  /* Headline slightly smaller on mobile */
+  h1 { font-size: 1.4rem; margin: 6px 0 10px; }
+
+  /* Preview: keep compact, bottom-right if you float it */
   .link-preview-global {
     width: 110px;
     height: 110px;
@@ -226,8 +299,78 @@ li.bookmark-item:focus-within .bookmark-buttons {
     top: auto;
     left: auto;
   }
+
+  /* List container: allow natural page scroll */
+  .bookmark-scroll-container {
+    overflow: visible;
+  }
+
+  /* List items: tighter padding; content gap smaller */
+  li.bookmark-item { padding: 8px 10px; }
+  .bookmark-content { display: flex; gap: 0.5rem; align-items: center; }
+
+  /* Action buttons: always visible on touch; right-aligned */
+  .bookmark-buttons {
+    margin-left: auto;
+    visibility: visible !important;
+    opacity: 1 !important;
+    display: inline-flex;
+    gap: 6px;
+  }
+  .btn { padding: 6px 10px; border-radius: 8px; }
+  .btn.delete { color: #b00020; }
+
+  .edit-mode input[type="text"] {
+    padding: 10px 12px;
+    font-size: 16px;
+    border-radius: 8px;
+  }
+  .edit-mode .actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+  .btn--primary { background: #0b5cff; color: #fff; }
+
+  /* Pagination: centered, compact */
+  .pagination {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin: 14px 0 10px;
+  }
+  .pagination button {
+    padding: 6px 10px;
+    border-radius: 8px;
+  }
 }
+
+/* -------------------------
+   Small phones (≤420)
+   ------------------------- */
 @media (max-width: 420px) {
-  .add-form { flex-direction: column; align-items: stretch; }
-  .add-form button { width: 100%; }
+  /* Slightly tighter vertical rhythm */
+  .add-form { gap: 8px; padding: 8px 0 10px; }
+
+  .url-input {
+    padding: 10px 12px;
+    font-size: 15px;  /* still tap-safe but saves space */
+    border-radius: 8px;
+  }
+
+  .add-form button[type="submit"] {
+    font-size: 15px;
+    padding: 12px;
+    border-radius: 8px;
+  }
+
+  .bookmark-buttons { gap: 4px; }
+  .btn { padding: 6px 8px; }
+
+  .pagination button {
+    padding: 4px 8px;
+    font-size: 14px;
+  }
 }
+
+
