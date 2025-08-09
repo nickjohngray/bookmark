@@ -1,0 +1,118 @@
+<!-- OVERVIEW PAGE (REPLACE) -->
+<section class="container">
+  <h1>Bookmark Manager</h1>
+
+  <!-- Dev/Test Buttons -->
+  <div class="dev-tools">
+    <button type="button" (click)="loadTestData()">Load Test Data</button>
+    <button type="button" (click)="clearAll()">Clear All</button>
+    <button type="button" (click)="addSample()">Add Sample</button>
+  </div>
+
+  <!-- Add URL form (simple, robust) -->
+  <form class="add-form" (submit)="add(urlInput); $event.preventDefault()">
+    <label class="sr-only" for="url">Add a URL</label>
+    <input
+      #urlInput
+      id="url"
+      class="url-input"
+      type="text"
+      name="url"
+      placeholder="Add a URL (http/https optional)"
+      autocomplete="off"
+      aria-label="Add a URL"
+    />
+    <button type="submit" class="btn btn--primary">Add</button>
+    <button type="button" class="btn" (click)="clearAll()">Clear all</button>
+  </form>
+
+  <!-- Optional: existence/validation messages can be shown via alerts in TS as we do -->
+
+  <!-- Preview block (null-safe) -->
+  <div *ngIf="hoveredBookmark as hb" class="link-preview-global" aria-live="polite">
+    <h2 class="sr-only">Preview</h2>
+    <img
+      [src]="'https://image.thum.io/get/width/300/crop/768/' + hb.url"
+      [alt]="'Preview of ' + hb.url"
+    />
+  </div>
+
+  <!-- Bookmarks list -->
+  <div class="bookmark-scroll-container">
+    <ul class="bookmark-list">
+      <!--
+        Row behavior:
+        - Keyboard focusable item container
+        - Arrow keys handled in component if you wire them (aliases present)
+        - Hover sets hoveredBookmark to show preview and buttons on desktop
+      -->
+      <li
+        *ngFor="let bookmark of paginatedBookmarks; let i = index"
+        class="bookmark-item"
+        tabindex="0"
+        [attr.id]="'bookmark-item-' + i"
+        (focus)="handleItemFocus(i)"
+        (blur)="focusedId = null"
+        (mouseenter)="hoveredId = bookmark.id; hoveredBookmark = { id: bookmark.id, url: bookmark.url }"
+        (mouseleave)="hoveredId = null; hoveredBookmark = null"
+        (keydown.ArrowDown)="editNextItem(i)"
+        (keydown.ArrowUp)="editPreviousItem(i)"
+        (keydown.enter)="startEditing(bookmark)"
+      >
+        <div class="bookmark-content">
+          <!-- Normal row -->
+          <ng-container *ngIf="editingId !== bookmark.id; else editTpl">
+           <span  (click)="startEditingAndFocusToInput(bookmark)" class="bookmark-link" tabindex="-1">
+              {{ bookmark.url }}
+            </span>
+
+            <!-- Action buttons (desktop shows on hover/focus; mobile always visible via CSS) -->
+            <span
+              class="bookmark-buttons"
+              [class.visible]="editingId === null && hoveredId === bookmark.id && (!focusedId || focusedId === bookmark.id)"
+            >
+              <button type="button" class="btn" (click)="startEditing(bookmark)">Edit</button>
+              <button type="button" class="btn delete" (click)="delete(bookmark.id)">Delete</button>
+            </span>
+          </ng-container>
+
+          <!-- Edit mode -->
+          <ng-template #editTpl>
+            <div class="edit-mode">
+              <input
+                type="text"
+                [(ngModel)]="editingValue"
+                name="editUrl-{{ bookmark.id }}"
+                placeholder="Enter new URL"
+                (keyup.enter)="saveEdit()"
+                (keyup.escape)="cancelEdit()"
+                autofocus
+                aria-label="Edit URL"
+              />
+              <div class="actions">
+                <button type="button" class="btn btn--primary" (click)="saveEdit()">Save</button>
+                <button type="button" class="btn" (click)="cancelEdit()">Cancel</button>
+              </div>
+            </div>
+          </ng-template>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <!-- Pagination: < 1 2 3 > -->
+  <nav class="pagination" aria-label="Pagination">
+    <button type="button" (click)="prevPage()" [disabled]="currentPage === 1">&lt;</button>
+
+    <button
+      type="button"
+      *ngFor="let _ of [].constructor(totalPages); let idx = index"
+      (click)="goToPage(idx + 1)"
+      [class.active]="currentPage === idx + 1"
+    >
+      {{ idx + 1 }}
+    </button>
+
+    <button type="button" (click)="nextPage()" [disabled]="currentPage === totalPages">&gt;</button>
+  </nav>
+</section>

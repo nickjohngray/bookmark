@@ -1,0 +1,88 @@
+/* THANK YOU PAGE POLISH WITH FADE-IN ANIMATION */
+
+/* Full-page centering */
+.thank-you {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #f7f7f8;
+  padding: 1rem;
+}
+
+/* Card container */
+.thank-you__card {
+  background: #fff;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  max-width: 500px;
+  width: 100%;
+  text-align: center;
+  animation: fade-in 0.4s ease-out both; /* smooth appearance */
+}
+
+/* Title styling */
+.thank-you__card h1 {
+  font-size: 1.75rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Subtitle text */
+.thank-you__card p {
+  margin: 0.5rem 0;
+}
+
+/* Submitted URL */
+.url-label {
+  font-weight: bold;
+}
+.submitted-url {
+  color: #0b5cff;
+  text-decoration: none;
+  word-break: break-word;
+}
+.submitted-url:hover {
+  text-decoration: underline;
+}
+
+/* Back button */
+.back-button {
+  margin-top: 1.5rem;
+  padding: 0.75rem 1.25rem;
+  font-weight: 600;
+  background: #0b5cff;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+.back-button:hover {
+  background-color: #063aa3;
+}
+.back-button:focus {
+  outline: 3px solid #eef5ff;
+}
+
+/* Fade-in animation */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Mobile tweaks */
+@media (max-width: 500px) {
+  .thank-you__card {
+    padding: 1.25rem;
+  }
+  .thank-you__card h1 {
+    font-size: 1.5rem;
+  }
+}

@@ -40,3 +40,16 @@ testem.log
 # System files
 .DS_Store
 Thumbs.db
+
+# APPEND to existing .gitignore
+# Node / Angular
+node_modules/
+dist/
+.tmp/
+.angular/
+coverage/
+
+# Env & local configs
+.env
+.env.local
+*.local

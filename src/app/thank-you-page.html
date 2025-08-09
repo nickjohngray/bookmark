@@ -1,0 +1,21 @@
+<!-- THANK YOU PAGE TEMPLATE -->
+<main class="thank-you">
+  <section class="thank-you__card">
+    <h1>Thank You!</h1>
+    <p>Your bookmark was submitted.</p>
+    <p>
+      <span class="url-label">Submitted URL:</span>
+      <a
+        class="submitted-url"
+        [href]="submittedUrl"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        {{ submittedUrl }}
+      </a>
+    </p>
+    <button type="button" class="back-button" (click)="goBack()">
+      Back to bookmarks
+    </button>
+  </section>
+</main>

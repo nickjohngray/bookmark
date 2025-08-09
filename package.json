@@ -6,8 +6,13 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
-  },
+    "test": "ng test",
+    "lint": "eslint 'src/**/*.{ts,js,html}'",
+    "lint:fix": "eslint 'src/**/*.{ts,js,html}' --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "build:prod": "ng build --configuration production"
+      },
   "prettier": {
     "overrides": [
       {
