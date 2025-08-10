@@ -1,1 +1,22 @@
+<!-- -------------------------------------------------------------------------
+     Router Outlet
+
+     Purpose:
+     - Acts as a placeholder for rendering the component associated with the
+       current active route.
+     - Angular's Router replaces this tag with the template of the component
+       that matches the current URL.
+
+     How it works:
+     - When the user navigates to `/` (root), the `OverviewPage` component
+       is injected here.
+     - When the user navigates to `/thank-you`, the `ThankYouPage` component
+       (lazy-loaded) is injected here.
+     - Switching routes automatically swaps the displayed component without
+       reloading the page, enabling SPA (Single Page Application) behavior.
+
+     Notes:
+     - You only need one `<router-outlet>` in the root template unless you
+       have named or nested outlets for advanced layouts.
+------------------------------------------------------------------------- -->
 <router-outlet></router-outlet>

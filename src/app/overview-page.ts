@@ -9,14 +9,18 @@ import {
   ViewChild,
   ElementRef,
   OnInit,
-  AfterViewInit,
-
+  AfterViewInit, inject,
 } from '@angular/core';
-import { BookmarkService, Bookmark } from './bookmark.service';
+import { Bookmark } from './bookmark.model';
+import { BookmarkService } from './bookmark.service';
 import { FormsModule } from '@angular/forms';
-import { CommonModule} from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import testBookmarks from './data/bookmarks.json'
+import testBookmarks from './data/bookmarks.json';
+import { normalizeUserUrlInput } from './utils/normalize-url';
+import { previewUrl } from './utils/preview';
+import { openWindow } from './utils/window-utils';
+import { handleKeyDown as handleKeyDownUtil } from './utils/dom-navigation';
 
 @Component({
   selector: 'app-overview-page',
@@ -27,36 +31,99 @@ import testBookmarks from './data/bookmarks.json'
   standalone: true
 })
 export class OverviewPage implements OnInit, AfterViewInit {
+  /* -------------------------------------------------------------------------
+     Dependency Injection (Angular 16+ `inject` API)
+
+     We pull Router and BookmarkService with `inject(...)` instead of a
+     constructor. This keeps the class header minimal and still provides
+     typed, private fields accessible anywhere in the component.
+  ------------------------------------------------------------------------- */
+  private router = inject(Router);
+  private bookmarkService = inject(BookmarkService);
+
+  /* -------------------------------------------------------------------------
+     Re-expose imported utility functions as component properties.
+
+     Why:
+     - These functions (`previewUrl` and `openWindow`) were moved out of the
+       component into the `utils/` folder for better code organization,
+       reusability, and unit-testability.
+     - However, our Angular templates still call them as if they are methods
+       of this component (e.g., `(click)="openWindow(bookmark)"` or
+       `[src]="previewUrl(bookmark.url)"`).
+     - By assigning the imported functions to class properties with the same
+       names, we preserve the original template bindings without changing
+       any HTML.
+
+     Benefit:
+     - Keeps the `OverviewPage` component smaller and easier to read.
+     - Allows us to test these utilities in isolation without spinning up
+       the whole component.
+     - Maintains backwards compatibility with existing template code.
+
+     Note:
+     - `handleKeyDown` is *not* re-exposed this way because we need it to be
+       decorated with `@HostListener` for global key event handling. If we
+       assigned it directly, the `@HostListener` decorator would be bypassed.
+  ------------------------------------------------------------------------- */
+  previewUrl = previewUrl;
+  openWindow = openWindow;
+  // handleKeyDown = handleKeyDown; //  intentionally omitted
+
+  /* -------------------------------------------------------------------------
+     Global keyboard handling
+
+     We subscribe at the `document` level so arrow-key navigation and other
+     shortcuts work regardless of which element is focused. The logic itself
+     lives in a shared util (testable and reusable); this method is a thin
+     adapter between Angular and our pure function.
+  ------------------------------------------------------------------------- */
+  @HostListener('document:keydown', ['$event'])
+  handleKeyDown(event: KeyboardEvent): void {
+    handleKeyDownUtil(event);
+  }
+
+  /* -------------------------------------------------------------------------
+     State: source of truth for the template
+
+     - `bookmarks`: all stored items from the service (full dataset).
+     - `paginatedBookmarks`: the current visible slice (per page).
+     - `pageSize`/`currentPage`/`totalPages`: PHQ spec requires 20 per page.
+     - `editingId`/`editingValue`: tracks edit mode.
+     - `hoveredId`/`hoveredBookmark`/`focusedId`: UX states for hover/focus.
+     - `previewVisible`: toggles CSS class to animate preview dock.
+     - `isMobileDevice`: coarse UA check so we can tweak small-screen UX.
+  ------------------------------------------------------------------------- */
   bookmarks: Bookmark[] = [];
   paginatedBookmarks: Bookmark[] = [];
-
-  // PHQ spec: 20 per page
   readonly pageSize = 20;
   currentPage = 1;
   totalPages = 1;
-
-  // Edit state
   editingId: string | null = null;
   editingValue = '';
-
-  // Hover/focus/preview state (used by template)
   hoveredId: string | null = null;
   hoveredBookmark: { id: string; url: string } | null = null;
   focusedId: string | null = null;
-
-  // Preview animation toggle (controls .show class)
   previewVisible = false;
-
-  // determines if it is mobile device or not
   isMobileDevice = false;
 
-  // Refs
-  @ViewChild('editInput') editInputRef!: ElementRef<HTMLInputElement>;
-  @ViewChild('addInput') addInputRef!: ElementRef<HTMLInputElement>; // optional; safe-guarded usage
+  /* -------------------------------------------------------------------------
+     Template ElementRefs (safe optional focus management)
 
-  // -------------------------------------------------------------------------
-  // Global listeners to exit edit mode when clicking / focusing out
-  // -------------------------------------------------------------------------
+     - `editInputRef`: edit textbox inside the row (when present).
+     - `addInputRef`: the "Add a URL" textbox at the top. Focused on load
+       and when returning from Thank You page to keep the flow snappy.
+  ------------------------------------------------------------------------- */
+  @ViewChild('editInput') editInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('addInput') addInputRef!: ElementRef<HTMLInputElement>;
+
+  /* -------------------------------------------------------------------------
+     Global click/focus listeners
+
+     We exit edit mode when the user clicks or tabs away from the editing UI.
+     Using both `click` and `focusin` ensures the UX is consistent for mouse
+     and keyboard users and improves accessibility.
+  ------------------------------------------------------------------------- */
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
     const target = event.target as HTMLElement;
@@ -71,147 +138,14 @@ export class OverviewPage implements OnInit, AfterViewInit {
 
   /**
    * Stops editing mode if user clicks outside the currently editing bookmark item.
+   * This prevents a stale edit UI from lingering when the user shifts attention.
    */
   private stopEditIfClickOutSide(target: HTMLElement): void {
     if (!this.editingId) return;
-
     const editingIndex = this.bookmarks.findIndex(b => b.id === this.editingId);
     const itemEl = document.getElementById(`bookmark-item-${editingIndex}`);
-
     if (!itemEl?.contains(target)) {
       this.cancelEdit();
-    }
-  }
-
-  // -------------------------------------------------------------------------
-  // Keyboard navigation (Left/Right across buttons and items)
-  // -------------------------------------------------------------------------
-  @HostListener('document:keydown', ['$event'])
-  handleKeyDown(event: KeyboardEvent): void {
-    const target = event.target as HTMLElement;
-    const listItem = target.closest('.bookmark-item') as HTMLElement | null;
-
-    // Left Arrow on <li> (non-edit mode): move to previous item
-    if (
-      event.key === 'ArrowLeft' &&
-      listItem &&
-      !target.closest('.bookmark-buttons') &&
-      !target.closest('.edit-mode')
-    ) {
-      const prevItem = listItem.previousElementSibling as HTMLElement | null;
-      if (prevItem) prevItem.focus();
-      event.preventDefault();
-      return;
-    }
-
-    // Inside an <input>: special Left/Right handling
-    if (target.tagName === 'INPUT') {
-      const input = target as HTMLInputElement;
-
-      // Right arrow at end -> Save
-      if (event.key === 'ArrowRight' && input.selectionEnd === input.value.length) {
-        const saveBtn = listItem?.querySelector('.edit-mode button') as HTMLButtonElement | null;
-        if (saveBtn) {
-          saveBtn.focus();
-          event.preventDefault();
-        }
-        return;
-      }
-
-      // Left arrow at start -> previous item (or Save fallback)
-      if (event.key === 'ArrowLeft' && input.selectionStart === 0) {
-        const prevItem = listItem?.previousElementSibling as HTMLElement | null;
-        if (prevItem) {
-          prevItem.focus();
-        } else {
-          const saveBtn = listItem?.querySelector('.edit-mode button') as HTMLButtonElement | null;
-          saveBtn?.focus();
-        }
-        event.preventDefault();
-        return;
-      }
-
-      return; // otherwise let native input behavior continue
-    }
-
-    if (event.key === 'ArrowRight') {
-      // Case: <li> → first action button (Edit/Open)
-      if (listItem && !target.closest('.bookmark-buttons') && !target.closest('.edit-mode')) {
-        const editBtn = listItem.querySelector('.bookmark-buttons button') as HTMLButtonElement | null;
-        if (editBtn) {
-          editBtn.focus();
-          event.preventDefault();
-        }
-        return;
-      }
-
-      // Case: within action buttons → next/loop
-      if (target.closest('.bookmark-buttons')) {
-        const buttons = target.closest('.bookmark-buttons')?.querySelectorAll('button');
-        if (!buttons) return;
-        const arr = Array.from(buttons);
-        const idx = arr.findIndex(b => b === target);
-        if (idx < arr.length - 1) {
-          (arr[idx + 1] as HTMLElement).focus();
-        } else {
-          const nextItem = listItem?.nextElementSibling as HTMLElement | null;
-          if (nextItem) nextItem.focus();
-          else listItem?.focus();
-        }
-        event.preventDefault();
-        return;
-      }
-
-      // Case: in edit-mode buttons → Cancel or next item / loop
-      if (target.closest('.edit-mode')) {
-        const buttons = target.closest('.edit-mode')?.querySelectorAll('button');
-        if (!buttons) return;
-        const arr = Array.from(buttons);
-        const idx = arr.findIndex(b => b === target);
-        if (idx < arr.length - 1) {
-          (arr[idx + 1] as HTMLElement).focus();
-        } else {
-          const input = listItem?.querySelector('input') as HTMLInputElement | null;
-          const nextItem = listItem?.nextElementSibling as HTMLElement | null;
-          if (nextItem) nextItem.focus();
-          else {
-            input?.focus();
-            input?.setSelectionRange(input.value.length, input.value.length);
-          }
-        }
-        event.preventDefault();
-        return;
-      }
-    }
-
-    if (event.key === 'ArrowLeft') {
-      // In action buttons: Delete → Edit, Edit → <li>
-      if (target.closest('.bookmark-buttons')) {
-        const buttons = target.closest('.bookmark-buttons')?.querySelectorAll('button');
-        if (!buttons) return;
-        const arr = Array.from(buttons);
-        const idx = arr.findIndex(b => b === target);
-        if (idx > 0) (arr[idx - 1] as HTMLElement).focus();
-        else listItem?.focus();
-        event.preventDefault();
-        return;
-      }
-
-      // In edit-mode buttons: Cancel → Save, Save → input
-      if (target.closest('.edit-mode')) {
-        const buttons = target.closest('.edit-mode')?.querySelectorAll('button');
-        if (!buttons) return;
-        const arr = Array.from(buttons);
-        const idx = arr.findIndex(b => b === target);
-        if (idx > 0) (arr[idx - 1] as HTMLElement).focus();
-        else {
-          const input = listItem?.querySelector('input') as HTMLInputElement | null;
-          input?.focus();
-          if (input) input.setSelectionRange(input.value.length, input.value.length);
-        }
-        event.preventDefault();
-        return;
-      }
     }
   }
 
@@ -219,29 +153,35 @@ export class OverviewPage implements OnInit, AfterViewInit {
   // Lifecycle
   // -------------------------------------------------------------------------
   ngAfterViewInit(): void {
-    // Focus the add input on first load (safe optional)
+    /* Focus the add input on first load. Wrapped in setTimeout so the view
+       is fully initialized before we attempt to focus, avoiding race issues. */
     setTimeout(() => this.addInputRef?.nativeElement?.focus());
   }
 
   ngOnInit(): void {
+    /* -----------------------------------------------------------------------
+       Read navigation state (e.g., came from Thank You page).
+       If `fromThankYou` is set, we return focus to the add input so the user
+       can continue adding links without extra clicks. */
     const navigation = this.router.getCurrentNavigation();
     const state = navigation?.extras.state as { fromThankYou?: boolean } | undefined;
 
+    /* -----------------------------------------------------------------------
+       Coarse device detection for mobile/tablet experience tweaks. */
     this.isMobileDevice = /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i
       .test(navigator.userAgent);
 
+    /* -----------------------------------------------------------------------
+       Restore focus to "Add a URL" when returning from Thank You page. */
     if (state?.fromThankYou) {
       setTimeout(() => this.addInputRef?.nativeElement?.focus());
     }
 
+    /* -----------------------------------------------------------------------
+       Load all bookmarks from the service and build the first page. */
     this.bookmarks = this.bookmarkService.getBookmarks();
     this.refreshFromService();
   }
-
-  constructor(
-    private bookmarkService: BookmarkService,
-    private router: Router
-  ) {}
 
   // -------------------------------------------------------------------------
   // Preview dock (desktop hover + mobile tap)
@@ -249,11 +189,9 @@ export class OverviewPage implements OnInit, AfterViewInit {
   /** Show preview for a bookmark (works on hover for desktop, tap for mobile). */
   showPreview(bookmark: Bookmark): void {
     if (this.editingId) return; // don’t show while editing
-
     this.hoveredId = bookmark.id;
     this.hoveredBookmark = { id: bookmark.id, url: bookmark.url };
-
-    // Reset then trigger to ensure CSS transition runs
+    // Reset then trigger so CSS transition reliably fires
     this.previewVisible = false;
     setTimeout(() => (this.previewVisible = true), 0);
   }
@@ -261,7 +199,7 @@ export class OverviewPage implements OnInit, AfterViewInit {
   /** Hide the preview (mouseleave, blur, or pressing the close button). */
   clearPreview(): void {
     this.previewVisible = false;
-    // Let the fade/slide finish before clearing the data
+    // Let the animation complete before clearing data to avoid jank
     setTimeout(() => {
       this.hoveredId = null;
       this.hoveredBookmark = null;
@@ -276,13 +214,15 @@ export class OverviewPage implements OnInit, AfterViewInit {
     const raw = urlInput.value.trim();
     if (!raw) return;
 
-    const normalized = this.validateAndNormalize(raw);
+    // Normalize and validate user input (protocol defaults / typo recovery).
+    const normalized = normalizeUserUrlInput(raw);
     if (!normalized) {
       alert('Invalid URL. Include a valid domain (protocol added automatically).');
       urlInput.focus();
       return;
     }
 
+    // Existence check: treat any resolved `no-cors` HEAD as "likely exists".
     const exists = await this.checkUrlExists(normalized);
     if (!exists) {
       const go = confirm('That URL did not respond. Add it anyway?');
@@ -292,6 +232,7 @@ export class OverviewPage implements OnInit, AfterViewInit {
       }
     }
 
+    // Persist via service; handle duplicates and failures gracefully.
     const res = this.bookmarkService.addBookmark(normalized);
     if (!res.ok) {
       if (res.reason === 'duplicate') {
@@ -303,34 +244,26 @@ export class OverviewPage implements OnInit, AfterViewInit {
       return;
     }
 
+    // Clear input then navigate to Thank You page (brief flow confirmation).
     urlInput.value = '';
-
-    // Navigate to Thank You
     await this.router.navigate(['/thank-you'], {
       queryParams: { url: normalized },
       state: { submittedUrl: normalized, fromOverview: true }
     });
   }
 
-  previewUrl(raw: string): string {
-    const normalized = raw.replace(/^http:\/\//, 'https://');
-    return 'https://s.wordpress.com/mshots/v1/' +
-      encodeURIComponent(normalized) +
-      '?w=300&h=168';
-  }
-
   /** Begin editing a bookmark and focus to the input. */
   startEditingAndFocusToInput(b: Bookmark): void {
+    // Avoid redundant re-entry if the same item is already in edit mode.
+    if (this.editingId === b.id) return;
     this.startEditing(b);
-
     const editingIndex = this.bookmarks.findIndex(x => x.id === this.editingId);
     const bookmarkItem = document.getElementById(`bookmark-item-${editingIndex}`);
-
     setTimeout(() => {
       const editTextBox = bookmarkItem?.querySelector('input') as HTMLInputElement | null;
       if (editTextBox) {
         editTextBox.focus();
-        // place caret at beginning (show user they can type over)
+        // Place caret at beginning to signal “type to replace”
         editTextBox.setSelectionRange(0, 0);
       }
     });
@@ -338,41 +271,39 @@ export class OverviewPage implements OnInit, AfterViewInit {
 
   /** Begin editing a bookmark. */
   startEditing(b: Bookmark): void {
-    // Hide preview while editing to avoid overlap
-    //this.clearPreview();
-
+    if (this.editingId === b.id) return;
     this.editingId = b.id;
     this.editingValue = b.url;
     this.focusedId = b.id;
   }
 
-
   /** Save current edit. */
-  async save($event: Event): Promise<void>  {
+  async save($event: Event): Promise<void> {
     const target = event?.target as HTMLElement;
     if (!this.editingId) return;
-    // stop this event from being consumed by the enter key on Edit
+
+    // Prevent Enter bubbling from triggering unintended handlers upstream.
     $event.stopPropagation();
+
+    // If value didn’t change, skip write and move to next item for speed.
     const editingIndex = this.bookmarks.findIndex(b => b.id === this.editingId);
-    const  oldBookmark: Bookmark | undefined = this.bookmarks[editingIndex];
-    // do nothing if the value hasn't changed
-    if(oldBookmark?.url === this.editingValue) {
-
-
-       setTimeout( ()=>  this.editNextItem(editingIndex),  )
+    const oldBookmark: Bookmark | undefined = this.bookmarks[editingIndex];
+    if (oldBookmark?.url === this.editingValue) {
+      setTimeout(() => this.editNextItem(editingIndex),);
       return;
-    };
+    }
 
+    // Validate and normalize the new value (same path as Add).
     const raw = this.editingValue.trim();
     if (!raw) return;
-
-    const normalized = this.validateAndNormalize(raw);
+    const normalized = normalizeUserUrlInput(raw);
     if (!normalized) {
       alert('Invalid URL. Include a valid domain (protocol added automatically).');
       // target.focus();
       return;
     }
 
+    // Best-effort existence check (same UX as Add).
     const exists = await this.checkUrlExists(normalized);
     if (!exists) {
       const go = confirm('That URL did not respond. Add it anyway?');
@@ -381,30 +312,31 @@ export class OverviewPage implements OnInit, AfterViewInit {
         return;
       }
     }
+
+    // Persist edit via service and handle duplicate collisions.
     const res = this.bookmarkService.updateBookmark(this.editingId, normalized);
     if (!res.ok) {
       if (res.reason === 'duplicate') {
         alert('That URL is already saved.');
-        //target.focus();
+        // target.focus();
       } else {
         alert('Could not add that URL.');
       }
       return;
     }
 
+    // Exit edit mode, refresh list, then move focus down one item.
     this.editingId = null;
     this.editingValue = '';
     this.refreshFromService();
-    // wait for view mode to be set before setting focus
-    setTimeout( ()=>  this.editNextItem(editingIndex -1),  )
-
+    setTimeout(() => this.editNextItem(editingIndex - 1),);
   }
 
   /** Cancel editing. */
   cancelEdit(): void {
     this.editingId = null;
     this.editingValue = '';
-    // Ensu re hover states are clean after cancelling (prevents stale UI)
+    // Ensure hover states are clean after cancelling (prevents stale UI)
     this.hoveredId = null;
     this.hoveredBookmark = null;
     this.previewVisible = false;
@@ -424,7 +356,7 @@ export class OverviewPage implements OnInit, AfterViewInit {
   /** Seed test data (defaults to 100 unique items). */
   loadTestData(count: number = 100): void {
     this.bookmarkService.clearAll();
-    const urls =  testBookmarks;
+    const urls = testBookmarks;
     for (const { url } of urls) {
       this.bookmarkService.addBookmark(url);
     }
@@ -445,12 +377,14 @@ export class OverviewPage implements OnInit, AfterViewInit {
   // -------------------------------------------------------------------------
   // Pagination
   // -------------------------------------------------------------------------
+  /** Navigate to page `n` if in range and rebuild the visible slice. */
   goToPage(n: number): void {
     if (n < 1 || n > this.totalPages) return;
     this.currentPage = n;
     this.updatePagination();
   }
 
+  /** Convenience helpers for next/previous page controls. */
   nextPage(): void { this.goToPage(this.currentPage + 1); }
   prevPage(): void { this.goToPage(this.currentPage - 1); }
 
@@ -472,57 +406,33 @@ export class OverviewPage implements OnInit, AfterViewInit {
   // -------------------------------------------------------------------------
   // Keyboard helpers (optional; template-safe no-ops)
   // -------------------------------------------------------------------------
+  /** Focus helper for moving between rows while editing/navigating. */
   private focusBookmarkItem(index: number): void {
     // const el = document.getElementById(`bookmark-item-${index}`) as HTMLElement | null;
     // if (el) el.focus();
-
     this.startEditingAndFocusToInput(this.bookmarks[index]);
   }
 
-  openWindow(b: Bookmark): void {
-    window.open(b.url, '_blank', 'noopener');
-  }
-
-  // Arrow Down: go to next visible row
+  /** Arrow Down: go to next visible row (exits edit mode first if active). */
   editNextItem(i: number): void {
     if (this.editingId) this.cancelEdit();
     const next = i + 1;
     if (next < this.paginatedBookmarks.length) this.focusBookmarkItem(next);
   }
 
-  // Arrow Up: go to previous visible row
+  /** Arrow Up: go to previous visible row (exits edit mode first if active). */
   editPreviousItem(i: number): void {
     if (this.editingId) this.cancelEdit();
     const prev = i - 1;
     if (prev >= 0) this.focusBookmarkItem(prev);
   }
 
-  // Keep track of focus so hover/focus logic stays tidy
+  /** Keep track of focus so hover/focus logic stays tidy. */
   handleItemFocus(i: number): void {
     const b = this.paginatedBookmarks[i];
     this.focusedId = b?.id ?? null;
-
     // If another item is being edited and user focuses a different row, exit edit mode
     if (this.editingId && this.focusedId !== this.editingId) this.cancelEdit();
-  }
-
-  // -------------------------------------------------------------------------
-  // Helpers
-  // -------------------------------------------------------------------------
-  /** Normalize structure (adds http:// if missing), basic validation. */
-  private validateAndNormalize(raw: string): string | null {
-    const trimmed = raw.trim();
-    if (!trimmed) return null;
-
-    const withProtocol = /^[a-zA-Z][\w+.-]*:\/\//.test(trimmed) ? trimmed : `http://${trimmed}`;
-    try {
-      const u = new URL(withProtocol);
-      if (!u.hostname.includes('.')) return null;
-      u.pathname = u.pathname.replace(/\/$/, ''); // drop trailing slash
-      return u.toString();
-    } catch {
-      return null;
-    }
   }
 
   /**
@@ -544,18 +454,16 @@ export class OverviewPage implements OnInit, AfterViewInit {
     if (jumpToFirst) this.currentPage = 1;
     this.totalPages = Math.max(1, Math.ceil(this.bookmarks.length / this.pageSize));
     this.updatePagination();
-
     // If current preview points to an ID no longer in the page, clear it
     if (this.hoveredId && !this.bookmarks.find(b => b.id === this.hoveredId)) {
       this.clearPreview();
     }
   }
 
-  /** Build current page slice. */
+  /** Build current page slice from the full dataset. */
   private updatePagination(): void {
     const start = (this.currentPage - 1) * this.pageSize;
     const end = start + this.pageSize;
     this.paginatedBookmarks = this.bookmarks.slice(start, end);
   }
-
 }

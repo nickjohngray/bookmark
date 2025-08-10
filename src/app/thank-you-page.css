@@ -1,12 +1,8 @@
 /* ==========================================================================
-   THANK YOU PAGE — scoped tweaks only
-   Relies on global styles.css for most styling
+   THANK YOU PAGE — scoped styles
+   Purpose: centered card with submitted URL and a back button.
    ========================================================================== */
-
-.thank-you {
-  display: flex;
-  justify-content: center;
-}
+.thank-you { display: flex; justify-content: center; }
 
 .thank-you__card {
   max-width: 500px;
@@ -14,27 +10,22 @@
   text-align: center;
 }
 
-/* Submitted URL box */
+/* Submitted URL: readonly info, emphasized with dashed border + soft brand bg */
 .submitted-url {
   display: inline-block;
   padding: .5rem .75rem;
   border: 1px dashed var(--border-strong, #cbd5e1);
   border-radius: 8px;
   color: var(--brand-ink, #0a4fde);
-  background: var(--focus, rgba(11,92,255,.12));
+  background: var(--focus, rgba(11, 92, 255, 0.12));
   text-decoration: none;
   overflow-wrap: anywhere;
 }
 .submitted-url:hover,
 .submitted-url:focus {
   text-decoration: underline;
-  background: rgba(11,92,255,.18);
-  /* keep default outline */
+  background: rgba(11, 92, 255, 0.18);
+  /* keep default focus outline for a11y */
 }
 
-/* Actions row */
-.actions {
-  margin-top: 1.25rem;
-  display: flex;
-  justify-content: center;
-}
+.actions { margin-top: 1.25rem; display: flex; justify-content: center; }

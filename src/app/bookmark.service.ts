@@ -1,37 +1,49 @@
-// Purpose: Single source of truth for bookmarks (storage + in‑memory + de‑dup)
+// -----------------------------------------------------------------------------
+// BookmarkService
+// Purpose:
+// - Single source of truth for all bookmarks in the app.
+// - Manages storage (localStorage), in-memory state, and duplicate prevention.
+// - Exposes a clean public API for components to add, update, delete, or read
+//   bookmarks without knowing about the underlying persistence logic.
+// -----------------------------------------------------------------------------
 
 import { Injectable } from '@angular/core';
-
-export interface Bookmark {
-  id: string;
-  url: string;
-}
+import { Bookmark } from './bookmark.model';
 
 @Injectable({ providedIn: 'root' })
 export class BookmarkService {
+  /** Key used to store bookmark data in localStorage */
   private readonly storageKey = 'bookmarks';
 
-  // In‑memory state mirrors localStorage
+  /** In-memory list of bookmarks; mirrors what’s in localStorage */
   private bookmarks: Bookmark[] = [];
 
-  // Fast duplicate detection on *normalized* URLs
+  /** Fast duplicate detection using normalized URLs as keys */
   private normalizedUrlSet = new Set<string>();
 
   constructor() {
+    // Load initial state from storage into memory
     this.loadFromStorage();
   }
 
-  // ---- Public API ----------------------------------------------------------
+  // ===========================================================================
+  // Public API — used by components and other services
+  // ===========================================================================
 
-  /** Return a fresh copy of all bookmarks (keeps callers from mutating state). */
+  /**
+   * Get all bookmarks (returns a copy so callers can’t mutate internal state).
+   * Always reloads from storage in case it was modified elsewhere.
+   */
   getBookmarks(): Bookmark[] {
     this.loadFromStorage();
     return [...this.bookmarks];
   }
 
   /**
-   * Try to add a bookmark. Returns { ok: true } on success.
-   * Duplicate detection is done on a normalized URL string.
+   * Add a new bookmark.
+   * - Normalizes the URL before storing.
+   * - Rejects duplicates or invalid URLs.
+   * @returns `{ ok: true }` on success or `{ ok: false, reason }` on failure.
    */
   addBookmark(rawUrl: string): { ok: boolean; reason?: 'duplicate' | 'invalid' } {
     const normalized = this.normalizeUrl(rawUrl);
@@ -49,7 +61,12 @@ export class BookmarkService {
     return { ok: true };
   }
 
-  /** Update a bookmark’s URL (keeps ID stable). */
+  /**
+   * Update the URL for an existing bookmark (ID stays the same).
+   * - Normalizes the new URL.
+   * - Detects duplicates against all other bookmarks.
+   * - Treats unchanged URLs as a success (no write needed).
+   */
   updateBookmark(id: string, newRawUrl: string): { ok: boolean; reason?: 'duplicate' | 'invalid' } {
     const idx = this.bookmarks.findIndex(b => b.id === id);
     if (idx === -1) return { ok: false, reason: 'invalid' };
@@ -57,13 +74,12 @@ export class BookmarkService {
     const normalized = this.normalizeUrl(newRawUrl);
     if (!normalized) return { ok: false, reason: 'invalid' };
 
-    // If the URL is unchanged, treat as success
     const currentNormalized = this.normalizeUrl(this.bookmarks[idx].url)!;
     if (normalized !== currentNormalized && this.normalizedUrlSet.has(normalized)) {
       return { ok: false, reason: 'duplicate' };
     }
 
-    // Update sets
+    // Update in-memory + de-dup set
     this.normalizedUrlSet.delete(currentNormalized);
     this.bookmarks[idx].url = normalized;
     this.normalizedUrlSet.add(normalized);
@@ -71,7 +87,7 @@ export class BookmarkService {
     return { ok: true };
   }
 
-  /** Remove a bookmark by ID. */
+  /** Delete a bookmark by ID. Also removes it from the de-dup set. */
   deleteBookmark(id: string): void {
     const idx = this.bookmarks.findIndex(b => b.id === id);
     if (idx === -1) return;
@@ -83,30 +99,38 @@ export class BookmarkService {
     this.saveToStorage();
   }
 
-  /** Clear everything: storage, in‑memory list, and de‑dup set. */
+  /** Clear all bookmarks from both localStorage and memory. */
   clearAll(): void {
     localStorage.removeItem(this.storageKey);
     this.bookmarks = [];
     this.normalizedUrlSet.clear();
   }
 
-  // ---- Private helpers -----------------------------------------------------
+  // ===========================================================================
+  // Private helpers — internal logic only
+  // ===========================================================================
 
-  /** Normalize a URL and return a canonical string; returns null if invalid. */
+  /**
+   * Normalize a URL:
+   * - Adds `http://` if protocol is missing.
+   * - Lowercases host and protocol.
+   * - Strips default ports (80/443).
+   * - Removes trailing slash from path.
+   * Returns `null` if invalid.
+   */
   private normalizeUrl(raw: string): string | null {
     const trimmed = raw.trim();
     if (!trimmed) return null;
 
-    // Add protocol if missing
+    // Ensure protocol is present; default to http:// if missing
     const withProtocol = /^[a-zA-Z][\w+.-]*:\/\//.test(trimmed) ? trimmed : `http://${trimmed}`;
 
     try {
       const u = new URL(withProtocol);
 
-      // Canonicalize: lower-case host, strip default ports, drop trailing slash
       const host = u.hostname.toLowerCase();
       const protocol = u.protocol.toLowerCase();
-      const pathname = u.pathname.replace(/\/$/, '');
+      const pathname = u.pathname.replace(/\/$/, ''); // strip trailing slash
       const port = (u.port && !this.isDefaultPort(protocol, u.port)) ? `:${u.port}` : '';
 
       return `${protocol}//${host}${port}${pathname}${u.search}${u.hash}`;
@@ -115,11 +139,12 @@ export class BookmarkService {
     }
   }
 
+  /** Detects if a port is the default for the given protocol. */
   private isDefaultPort(protocol: string, port: string): boolean {
     return (protocol === 'http:' && port === '80') || (protocol === 'https:' && port === '443');
   }
 
-  /** Read from localStorage into memory + rebuild de‑dup set. */
+  /** Load bookmarks from localStorage and rebuild the normalized URL set. */
   private loadFromStorage(): void {
     const raw = localStorage.getItem(this.storageKey);
     this.bookmarks = raw ? JSON.parse(raw) : [];
@@ -130,17 +155,20 @@ export class BookmarkService {
     );
   }
 
-  /** Persist current in‑memory list to localStorage. */
+  /** Save current bookmarks array to localStorage. */
   private saveToStorage(): void {
     localStorage.setItem(this.storageKey, JSON.stringify(this.bookmarks));
   }
 
-  /** Mobile‑safe UUID: crypto.randomUUID if available, else fallback. */
+  /**
+   * Generate a UUID in a mobile-safe way.
+   * - Uses `crypto.randomUUID` if available.
+   * - Falls back to a RFC4122-ish random string if not.
+   */
   private generateSafeUUID(): string {
     if (typeof crypto !== 'undefined' && typeof (crypto as any).randomUUID === 'function') {
       return (crypto as any).randomUUID();
     }
-    // RFC4122-ish fallback (not perfect, good enough for IDs here)
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
       const r = (Math.random() * 16) | 0;
       const v = c === 'x' ? r : (r & 0x3) | 0x8;

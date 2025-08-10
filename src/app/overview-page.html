@@ -1,15 +1,15 @@
-<!-- OVERVIEW PAGE (REPLACE) -->
+<!-- OVERVIEW PAGE -->
 <section class="container">
   <h1>Bookmark Manager</h1>
 
-  <!-- Dev/Test Buttons -->
+  <!-- Developer tools: seed, clear, sample -->
   <div class="dev-tools">
     <button type="button" (click)="loadTestData()">Load Test Data</button>
     <button type="button" (click)="clearAll()">Clear All</button>
     <button type="button" (click)="addSample()">Add Sample</button>
   </div>
 
-  <!-- Add URL form (simple, robust) -->
+  <!-- Add URL form (custom validation happens in TS) -->
   <form class="add-form" (submit)="add(urlInput); $event.preventDefault()">
     <label class="sr-only" for="url">Add a URL</label>
     <input
@@ -25,24 +25,21 @@
     <button type="submit">Add</button>
   </form>
 
-  <!-- Optional: existence/validation messages can be shown via alerts in TS as we do -->
-
-  <!-- Preview block (null-safe) -->
+  <!-- Small live region for hover preview (null-safe) -->
   <div *ngIf="hoveredBookmark as hb" class="link-preview-global" aria-live="polite">
     <h2 class="sr-only">Preview</h2>
-
-    <img [src]="previewUrl(hb.url)" alt="Preview">
-
+    <img [src]="previewUrl(hb.url)" alt="Preview" />
   </div>
 
-  <!-- Bookmarks list -->
+  <!-- Bookmarks list (20 per page; see pagination below) -->
   <div class="bookmark-scroll-container">
     <ul class="bookmark-list">
       <!--
         Row behavior:
-        - Keyboard focusable item container
-        - Arrow keys handled in component if you wire them (aliases present)
-        - Hover sets hoveredBookmark to show preview and buttons on desktop
+        - List item is focusable for keyboard nav
+        - Enter starts edit; Up/Down move selection
+        - Hover sets hoveredBookmark for preview & actions
+        - Click anywhere in the row enters edit mode
       -->
       <li
         *ngFor="let bookmark of paginatedBookmarks; let i = index"
@@ -59,49 +56,57 @@
         (keydown.enter)="startEditing(bookmark)"
       >
         <div class="bookmark-content">
+          <!-- Read mode -->
           <ng-container *ngIf="editingId !== bookmark.id; else editTpl">
-           <span  class="bookmark-text">
-              {{ bookmark.url }}
-            </span>
+            <span class="bookmark-text">{{ bookmark.url }}</span>
 
-             <span
-              class="bookmark-buttons"
-              [class.visible]="editingId === null"
-            >
-
-              <!-- Open Button -->
-             <button
-               class="edit-btn"
-               title="Open"
-               (click)="openWindow(bookmark)"
-             >
-              <svg xmlns="http://www.w3.org/2000/svg"
-                   width="20" height="20"
-                   viewBox="0 0 24 24"
-                   fill="none"
-                   stroke="currentColor"
-                   stroke-width="2"
-                   stroke-linecap="round"
-                   stroke-linejoin="round"
-                   aria-hidden="true">
-                <path d="M18 13v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                <polyline points="15 3 21 3 21 9" />
-                <line x1="10" y1="14" x2="21" y2="3" />
-              </svg>
-            </button>
-               <!-- Delete Button -->
-              <button class="delete-btn" title="Delete" (click)="delete(bookmark.id)">
-                <svg xmlns="http://www.w3.org/2000/svg"
-                     viewBox="0 0 24 24"
-                     width="16"
-                     height="16"
-                     fill="#ff4d4d">
-                  <path d="M3 6h18v2H3V6zm2 3h14v12a2 2 0 0 1-2
-                           2H7a2 2 0 0 1-2-2V9zm5 3v8h2v-8H10zm4
-                           0v8h2v-8h-2zM9 4V2h6v2h5v2H4V4h5z"/>
+            <!-- Actions: visible on hover/focus; also visible on touch via CSS -->
+            <span class="bookmark-buttons" [class.visible]="editingId === null">
+              <!-- Open -->
+              <button
+                class="edit-btn"
+                type="button"
+                title="Open"
+                (click)="openWindow(bookmark)"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M18 13v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                  <polyline points="15 3 21 3 21 9" />
+                  <line x1="10" y1="14" x2="21" y2="3" />
                 </svg>
               </button>
 
+              <!-- Delete -->
+              <button
+                class="delete-btn"
+                type="button"
+                title="Delete"
+                (click)="delete(bookmark.id)"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  width="16"
+                  height="16"
+                  fill="#ff4d4d"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M3 6h18v2H3V6zm2 3h14v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V9zm5 3v8h2v-8H10zm4 0v8h2v-8h-2zM9 4V2h6v2h5v2H4V4h5z"
+                  />
+                </svg>
+              </button>
             </span>
           </ng-container>
 
@@ -119,28 +124,46 @@
                 aria-label="Edit URL"
               />
               <div class="actions">
-                <button type="button" class="btn btn--primary" (click)="save($event)" title="Save">
-                  <svg xmlns="http://www.w3.org/2000/svg"
-                       width="20" height="20"
-                       viewBox="0 0 24 24"
-                       fill="none"
-                       stroke="currentColor"
-                       stroke-width="2"
-                       stroke-linecap="round"
-                       stroke-linejoin="round">
+                <button
+                  type="button"
+                  class="btn btn--primary"
+                  title="Save"
+                  (click)="save($event)"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
                 </button>
 
-                <button type="button" class="btn" (click)="cancelEdit()" title="Cancel">
-                  <svg xmlns="http://www.w3.org/2000/svg"
-                       width="20" height="20"
-                       viewBox="0 0 24 24"
-                       fill="none"
-                       stroke="currentColor"
-                       stroke-width="2"
-                       stroke-linecap="round"
-                       stroke-linejoin="round">
+                <button
+                  type="button"
+                  class="btn"
+                  title="Cancel"
+                  (click)="cancelEdit()"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
                     <line x1="18" y1="6" x2="6" y2="18" />
                     <line x1="6" y1="6" x2="18" y2="18" />
                   </svg>
@@ -155,17 +178,26 @@
 
   <!-- Pagination: < 1 2 3 > -->
   <nav class="pagination" aria-label="Pagination">
-    <button type="button" (click)="prevPage()" [disabled]="currentPage === 1">&lt;</button>
+    <button type="button" (click)="prevPage()" [disabled]="currentPage === 1">
+      &lt;
+    </button>
 
     <button
       type="button"
       *ngFor="let _ of [].constructor(totalPages); let idx = index"
       (click)="goToPage(idx + 1)"
       [class.active]="currentPage === idx + 1"
+      [attr.aria-current]="currentPage === idx + 1 ? 'page' : null"
     >
       {{ idx + 1 }}
     </button>
 
-    <button type="button" (click)="nextPage()" [disabled]="currentPage === totalPages">&gt;</button>
+    <button
+      type="button"
+      (click)="nextPage()"
+      [disabled]="currentPage === totalPages"
+    >
+      &gt;
+    </button>
   </nav>
 </section>
