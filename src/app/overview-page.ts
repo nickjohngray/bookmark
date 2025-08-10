@@ -279,7 +279,6 @@ export class OverviewPage implements OnInit, AfterViewInit {
 
   /** Save current edit. */
   async save($event: Event): Promise<void> {
-    const target = event?.target as HTMLElement;
     if (!this.editingId) return;
 
     // Prevent Enter bubbling from triggering unintended handlers upstream.
@@ -354,7 +353,7 @@ export class OverviewPage implements OnInit, AfterViewInit {
   // DEV: Seeding helpers (used by dev-tools buttons)
   // -------------------------------------------------------------------------
   /** Seed test data (defaults to 100 unique items). */
-  loadTestData(count: number = 100): void {
+  loadTestData(): void {
     this.bookmarkService.clearAll();
     const urls = testBookmarks;
     for (const { url } of urls) {

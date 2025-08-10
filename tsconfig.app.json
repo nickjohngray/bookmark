@@ -1,17 +1,18 @@
-/* To learn more about Typescript configuration file: https://www.typescriptlang.org/docs/handbook/tsconfig-json.html. */
-/* To learn more about Angular compiler options: https://angular.dev/reference/configs/angular-compiler-options. */
+/* Application-specific TypeScript config.
+   - Extends root settings.
+   - Excludes test files for faster build. */
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "outDir": "./out-tsc/app",
-    "types": [],
-    "resolveJsonModule": true,
-    "esModuleInterop": true
+    "outDir": "./out-tsc/app", // Output directory for compiled app code
+    "types": [], // No extra ambient type definitions for the app build
+    "resolveJsonModule": true, // Allow importing .json files directly
+    "esModuleInterop": true // Enable default imports from CommonJS modules
   },
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts" // Include all TS source files
   ],
   "exclude": [
-    "src/**/*.spec.ts"
+    "src/**/*.spec.ts" // Exclude unit test files
   ]
 }

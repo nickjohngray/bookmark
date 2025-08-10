@@ -10,7 +10,7 @@ export function normalizeUserUrlInput(
   if (!raw) return null;
 
   // Trim & sanitize obvious junk
-  let s = raw.trim().replace(/\\+/g, '/').replace(/\s+/g, '');
+  const s = raw.trim().replace(/\\+/g, '/').replace(/\s+/g, '');
 
   // Block unsafe schemes early
   if (/^(javascript|data|vbscript):/i.test(s)) return null;

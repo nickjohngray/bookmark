@@ -97,7 +97,7 @@ describe('handleKeyDown (DOM navigation)', () => {
   });
 
   it('ArrowRight cycles Edit → Delete within action buttons', () => {
-    const { li, edit, del } = setupRow();
+    const { edit, del } = setupRow();
     edit.focus();
     const ev = key(edit, 'ArrowRight');
     expect(document.activeElement).toBe(del);

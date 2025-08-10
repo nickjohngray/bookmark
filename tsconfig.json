@@ -1,34 +1,40 @@
-/* To learn more about Typescript configuration file: https://www.typescriptlang.org/docs/handbook/tsconfig-json.html. */
-/* To learn more about Angular compiler options: https://angular.dev/reference/configs/angular-compiler-options. */
+/* Root TypeScript configuration.
+   - Shared settings for app + spec builds.
+   - Follows Angular + Google style guidelines for strictness. */
 {
-  "compileOnSave": false,
+  "compileOnSave": false, // Do not auto-compile on file save (CI handles builds)
   "compilerOptions": {
-    "strict": true,
-    "noImplicitOverride": true,
-    "noPropertyAccessFromIndexSignature": true,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    "skipLibCheck": true,
-    "isolatedModules": true,
-    "experimentalDecorators": true,
-    "importHelpers": true,
-    "target": "ES2022",
-    "module": "preserve"
+    /* === Strictness flags (recommended by Google) === */
+    "strict": true, // Enable all strict type-checking options
+    "noImplicitOverride": true, // Require 'override' keyword when overriding a base class method
+    "noPropertyAccessFromIndexSignature": true, // Prevent unsafe property access via index signatures
+    "noImplicitReturns": true, // All code paths in a function must return a value
+    "noFallthroughCasesInSwitch": true, // Disallow fallthrough in switch statements
+
+    /* === Performance / safety === */
+    "skipLibCheck": true, // Skip type checking of declaration files
+    "isolatedModules": true, // Ensure each file can be safely transpiled in isolation
+    "experimentalDecorators": true, // Allow decorator syntax (needed for Angular)
+    "importHelpers": true, // Use TS helper imports to reduce bundle size
+
+    /* === Output targets === */
+    "target": "ES2022", // Modern JS output
+    "module": "preserve" // Keep module syntax for Angular's build pipeline
   },
+
+  /* Angular-specific compiler settings */
   "angularCompilerOptions": {
-    "enableI18nLegacyMessageIdFormat": false,
-    "strictInjectionParameters": true,
-    "strictInputAccessModifiers": true,
-    "typeCheckHostBindings": true,
-    "strictTemplates": true
+    "enableI18nLegacyMessageIdFormat": false, // Disable old i18n ID format
+    "strictInjectionParameters": true, // Enforce strict DI type checks
+    "strictInputAccessModifiers": true, // Respect 'private'/'protected' on inputs
+    "typeCheckHostBindings": true, // Validate host binding expressions
+    "strictTemplates": true // Full template type-checking
   },
+
+  /* Project references for multi-tsconfig setup */
   "files": [],
   "references": [
-    {
-      "path": "./tsconfig.app.json"
-    },
-    {
-      "path": "./tsconfig.spec.json"
-    }
+    { "path": "./tsconfig.app.json" },
+    { "path": "./tsconfig.spec.json" }
   ]
 }

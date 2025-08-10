@@ -160,18 +160,21 @@ export class BookmarkService {
     localStorage.setItem(this.storageKey, JSON.stringify(this.bookmarks));
   }
 
-  /**
-   * Generate a UUID in a mobile-safe way.
+  /** Generate a UUID in a mobile‑safe way.
    * - Uses `crypto.randomUUID` if available.
-   * - Falls back to a RFC4122-ish random string if not.
+   * - Falls back to RFC4122-ish random string if not.
    */
   private generateSafeUUID(): string {
-    if (typeof crypto !== 'undefined' && typeof (crypto as any).randomUUID === 'function') {
-      return (crypto as any).randomUUID();
+    const c = globalThis.crypto as Crypto | undefined;
+
+    if (c && typeof c.randomUUID === 'function') {
+      return c.randomUUID();
     }
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+
+    // Fallback for older mobile browsers
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (ch) => {
       const r = (Math.random() * 16) | 0;
-      const v = c === 'x' ? r : (r & 0x3) | 0x8;
+      const v = ch === 'x' ? r : (r & 0x3) | 0x8;
       return v.toString(16);
     });
   }

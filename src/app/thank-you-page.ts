@@ -10,10 +10,12 @@ import { CommonModule } from '@angular/common'
   imports: [CommonModule, RouterModule]
 })
 export class ThankYouPage {
-  submittedUrl: string = ''
+  submittedUrl = ''
 
   constructor(
+    // eslint-disable-next-line @angular-eslint/prefer-inject
     private route: ActivatedRoute,
+    // eslint-disable-next-line @angular-eslint/prefer-inject
     private router: Router
   ) {
     // Read URL parameter (submitted bookmark)

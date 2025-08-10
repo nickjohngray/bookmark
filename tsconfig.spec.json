@@ -1,14 +1,15 @@
-/* To learn more about Typescript configuration file: https://www.typescriptlang.org/docs/handbook/tsconfig-json.html. */
-/* To learn more about Angular compiler options: https://angular.dev/reference/configs/angular-compiler-options. */
+/* Unit-test TypeScript config.
+   - Extends root settings.
+   - Includes Jasmine types for Angular's testing environment. */
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "outDir": "./out-tsc/spec",
+    "outDir": "./out-tsc/spec", // Output directory for compiled spec/test code
     "types": [
-      "jasmine"
+      "jasmine" // Add Jasmine globals for unit testing
     ]
   },
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts" // Include all TS files for tests
   ]
 }
