@@ -11,16 +11,16 @@ import {
   OnInit,
   AfterViewInit, inject,
 } from '@angular/core';
-import { Bookmark } from './bookmark.model';
-import { BookmarkService } from './bookmark.service';
-import { FormsModule } from '@angular/forms';
-import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import {Bookmark} from './bookmark.model';
+import {BookmarkService} from './bookmark.service';
+import {FormsModule} from '@angular/forms';
+import {CommonModule} from '@angular/common';
+import {Router} from '@angular/router';
 import testBookmarks from './data/bookmarks.json';
-import { normalizeUserUrlInput } from './utils/normalize-url';
-import { previewUrl } from './utils/preview';
-import { openWindow } from './utils/window-utils';
-import { handleKeyDown as handleKeyDownUtil } from './utils/dom-navigation';
+import {normalizeUserUrlInput} from './utils/normalize-url';
+import {previewUrl} from './utils/preview';
+import {openWindow} from './utils/window-utils';
+import {handleKeyDown as handleKeyDownUtil} from './utils/dom-navigation';
 
 @Component({
   selector: 'app-overview-page',
@@ -115,7 +115,7 @@ export class OverviewPage implements OnInit, AfterViewInit {
        and when returning from Thank You page to keep the flow snappy.
   ------------------------------------------------------------------------- */
   @ViewChild('editInput') editInputRef!: ElementRef<HTMLInputElement>;
-  @ViewChild('addInput') addInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('urlInput') addInputRef!: ElementRef<HTMLInputElement>;
 
   /* -------------------------------------------------------------------------
      Global click/focus listeners
@@ -155,7 +155,7 @@ export class OverviewPage implements OnInit, AfterViewInit {
   ngAfterViewInit(): void {
     /* Focus the add input on first load. Wrapped in setTimeout so the view
        is fully initialized before we attempt to focus, avoiding race issues. */
-    setTimeout(() => this.addInputRef?.nativeElement?.focus());
+    setTimeout(() => this.addInputRef?.nativeElement?.focus(), 500);
   }
 
   ngOnInit(): void {
@@ -166,6 +166,7 @@ export class OverviewPage implements OnInit, AfterViewInit {
     const navigation = this.router.getCurrentNavigation();
     const state = navigation?.extras.state as { fromThankYou?: boolean } | undefined;
 
+
     /* -----------------------------------------------------------------------
        Coarse device detection for mobile/tablet experience tweaks. */
     this.isMobileDevice = /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i
@@ -173,27 +174,28 @@ export class OverviewPage implements OnInit, AfterViewInit {
 
     /* -----------------------------------------------------------------------
        Restore focus to "Add a URL" when returning from Thank You page. */
+    // First, try to read the "fromThankYou" flag from Angular Router's navigation state.
+    // This works when we arrive via router.navigate() from the Thank You page.
     if (state?.fromThankYou) {
+      // Delay focus until after the view is initialized and painted.
+      // Without the timeout, the input element may not exist yet.
       setTimeout(() => this.addInputRef?.nativeElement?.focus());
+    } else {
+      // If router state is missing (e.g., user clicked our Back button but
+      // Angular reused history instead of creating a new navigation object),
+      // fall back to reading it directly from browser history.state.
+      const { fromThankYou } = (history.state as { fromThankYou?: boolean }) || {};
+      if (fromThankYou) {
+        // Same deferred focus to avoid "element not found" timing issues.
+        setTimeout(() => this.addInputRef?.nativeElement?.focus());
+      }
     }
+
 
     /* -----------------------------------------------------------------------
        Load all bookmarks from the service and build the first page. */
     this.bookmarks = this.bookmarkService.getBookmarks();
     this.refreshFromService();
-  }
-
-  // -------------------------------------------------------------------------
-  // Preview dock (desktop hover + mobile tap)
-  // -------------------------------------------------------------------------
-  /** Show preview for a bookmark (works on hover for desktop, tap for mobile). */
-  showPreview(bookmark: Bookmark): void {
-    if (this.editingId) return; // don’t show while editing
-    this.hoveredId = bookmark.id;
-    this.hoveredBookmark = { id: bookmark.id, url: bookmark.url };
-    // Reset then trigger so CSS transition reliably fires
-    this.previewVisible = false;
-    setTimeout(() => (this.previewVisible = true), 0);
   }
 
   /** Hide the preview (mouseleave, blur, or pressing the close button). */
@@ -247,8 +249,8 @@ export class OverviewPage implements OnInit, AfterViewInit {
     // Clear input then navigate to Thank You page (brief flow confirmation).
     urlInput.value = '';
     await this.router.navigate(['/thank-you'], {
-      queryParams: { url: normalized },
-      state: { submittedUrl: normalized, fromOverview: true }
+      queryParams: {url: normalized},
+      state: {submittedUrl: normalized, fromOverview: true}
     });
   }
 
@@ -356,7 +358,7 @@ export class OverviewPage implements OnInit, AfterViewInit {
   loadTestData(): void {
     this.bookmarkService.clearAll();
     const urls = testBookmarks;
-    for (const { url } of urls) {
+    for (const {url} of urls) {
       this.bookmarkService.addBookmark(url);
     }
     this.refreshFromService(true);
@@ -384,8 +386,13 @@ export class OverviewPage implements OnInit, AfterViewInit {
   }
 
   /** Convenience helpers for next/previous page controls. */
-  nextPage(): void { this.goToPage(this.currentPage + 1); }
-  prevPage(): void { this.goToPage(this.currentPage - 1); }
+  nextPage(): void {
+    this.goToPage(this.currentPage + 1);
+  }
+
+  prevPage(): void {
+    this.goToPage(this.currentPage - 1);
+  }
 
   // -------------------------------------------------------------------------
   // Clear all
@@ -440,7 +447,7 @@ export class OverviewPage implements OnInit, AfterViewInit {
    */
   private async checkUrlExists(url: string): Promise<boolean> {
     try {
-      const res = await fetch(url, { method: 'HEAD', mode: 'no-cors' });
+      const res = await fetch(url, {method: 'HEAD', mode: 'no-cors'});
       return !!res;
     } catch {
       return false;
