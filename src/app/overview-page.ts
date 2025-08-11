@@ -459,6 +459,11 @@ export class OverviewPage implements OnInit, AfterViewInit {
     this.bookmarks = this.bookmarkService.getBookmarks();
     if (jumpToFirst) this.currentPage = 1;
     this.totalPages = Math.max(1, Math.ceil(this.bookmarks.length / this.pageSize));
+
+    // ADDED: clamp currentPage into valid range
+    if (this.currentPage > this.totalPages) this.currentPage = this.totalPages;
+    if (this.currentPage < 1) this.currentPage = 1;
+
     this.updatePagination();
     // If current preview points to an ID no longer in the page, clear it
     if (this.hoveredId && !this.bookmarks.find(b => b.id === this.hoveredId)) {
